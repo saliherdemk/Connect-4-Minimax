@@ -14,7 +14,7 @@ enum Color {
 
 const SIZE: usize = 9;
 
-fn create_new_game() -> (Player, Player, bool, [[char; SIZE]; SIZE]) {
+fn create_new_game() -> (Player, Player, bool, i32, [[char; SIZE]; SIZE]) {
     let mut user1_name = String::new();
     let mut user2_name = String::new();
 
@@ -79,13 +79,50 @@ fn create_new_game() -> (Player, Player, bool, [[char; SIZE]; SIZE]) {
     }
 
     let mut game_board: [[char; SIZE]; SIZE] = [[' '; SIZE]; SIZE];
-    (player1, player2, turn_control, game_board)
+    (player1, player2, turn_control, 1, game_board)
 }
 
-fn recover_session() {}
+fn recover_session() -> (Player, Player, bool, i32, [[char; SIZE]; SIZE]) {
+    let data = fs::read_to_string("tahta.txt").expect("Should have been able to read the file");
+    let data_array: Vec<_> = data.split("\n").collect();
+    let game_data_array: Vec<_> = data_array[0].split("|").collect();
+    let board_data = data_array[1];
+    let p1_data: Vec<_> = game_data_array[0].split(" ").collect();
+    let p2_data: Vec<_> = game_data_array[1].split(" ").collect();
+    let turn_control: bool = match game_data_array[2] {
+        "true" => true,
+        "false" => false,
+    };
+    let move_counter = game_data_array[3] as i32;
+
+    let p1 = Player {
+        name: p1_data[0].to_string(),
+        color: value_to_enum_type(p1_data[1].chars()),
+    };
+
+    let p2 = Player {
+        name: p2_data[0].to_string(),
+        color: value_to_enum_type(p2_data[1].chars()),
+    };
+
+    let mut game_board: [[char; SIZE]; SIZE] = [[' '; SIZE]; SIZE];
+
+    println!("{}", game_data);
+    println!("{}", board_data);
+    let mut i = 0;
+
+    for j in 0..9 {
+        for k in 0..9 {
+            game_board[j][k] = board_data.as_bytes()[i] as char;
+            i += 1;
+        }
+    }
+
+    (p1, p2, turn_control, move_counter, game_board)
+}
 
 fn main() {
-    let (mut player1, mut player2, mut turn_control, mut game_board);
+    let (mut player1, mut player2, mut turn_control, mut move_counter, mut game_board);
     loop {
         println!(
             "---------------------------------MENU---------------------------------\n1) Recover last session.\n2) Create new Game."
@@ -99,8 +136,9 @@ fn main() {
         match user_choice.trim().parse::<u32>() {
             Ok(i) => {
                 if i == 1 {
+                    (player1, player2, turn_control, move_counter, game_board) = recover_session();
                 } else if i == 2 {
-                    (player1, player2, turn_control, game_board) = create_new_game();
+                    (player1, player2, turn_control, move_counter, game_board) = create_new_game();
                     break;
                 } else {
                     println!("Input must be 1 or 2. Try again.");
@@ -111,8 +149,9 @@ fn main() {
         }
     }
 
+    display_board(&mut game_board);
+
     println!("\nPlayer can always leave by pressing the 'q'. Let the game begin.\n");
-    let mut move_counter = 1;
     loop {
         let current_player = if turn_control { &player2 } else { &player1 };
         println!(
@@ -137,9 +176,9 @@ fn main() {
         turn_control = !turn_control;
         update_board_file(
             &player1.name,
-            get_enum_value(&player1.color).to_string(),
+            enum_type_to_value(&player1.color).to_string(),
             &player2.name,
-            get_enum_value(&player2.color).to_string(),
+            enum_type_to_value(&player2.color).to_string(),
             turn_control.to_string(),
             move_counter.to_string(),
             &mut game_board
@@ -181,10 +220,17 @@ fn update_board_file(
     fs::write("tahta.txt", data).expect("Unable to write file");
 }
 
-fn get_enum_value(color: &Color) -> char {
+fn enum_type_to_value(color: &Color) -> char {
     match color {
         Color::Blue => 'B',
         Color::Red => 'R',
+    }
+}
+
+fn value_to_enum_type(color: char) -> Color {
+    match color {
+        'B' => Color::Blue,
+        'R' => Color::Red,
     }
 }
 
@@ -207,7 +253,7 @@ fn make_move(game_board: &mut [[char; SIZE]; SIZE], player: &Player) -> bool {
                 let mut count = 0;
                 for j in (0..SIZE).rev() {
                     if game_board[i - 1][j] == ' ' {
-                        game_board[i - 1][j] = get_enum_value(&player.color);
+                        game_board[i - 1][j] = enum_type_to_value(&player.color);
                         return check_winner(game_board, i - 1, j);
                     } else {
                         count += 1;
