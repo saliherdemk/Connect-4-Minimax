@@ -80,8 +80,13 @@ fn main() {
     let mut game_board: [[char; SIZE]; SIZE] = [[' '; SIZE]; SIZE];
     display_board(&mut game_board);
     loop {
-        make_move(&mut game_board, if turn_control { &player2 } else { &player1 });
+        let currentPlayer = if turn_control { &player2 } else { &player1 };
+        let hasWinner: bool = make_move(&mut game_board, currentPlayer);
         display_board(&mut game_board);
+        if hasWinner {
+            println!("{} won!", currentPlayer.name);
+            break;
+        }
         turn_control = !turn_control;
     }
 }
@@ -93,7 +98,7 @@ fn get_enum_value(color: &Color) -> char {
     }
 }
 
-fn make_move(game_board: &mut [[char; SIZE]; SIZE], player: &Player) {
+fn make_move(game_board: &mut [[char; SIZE]; SIZE], player: &Player) -> bool {
     loop {
         let mut player_choice = String::new();
         print!("{} Enter Slot to Drop (1-{}): ", player.name, SIZE);
@@ -109,7 +114,7 @@ fn make_move(game_board: &mut [[char; SIZE]; SIZE], player: &Player) {
                 for j in (0..SIZE).rev() {
                     if game_board[i - 1][j] == ' ' {
                         game_board[i - 1][j] = get_enum_value(&player.color);
-                        break;
+                        return check_winner(game_board, i - 1, j);
                     } else {
                         count += 1;
                     }
@@ -123,6 +128,7 @@ fn make_move(game_board: &mut [[char; SIZE]; SIZE], player: &Player) {
             Err(..) => println!("Input must be positive number. Try Again."),
         }
     }
+    return false;
 }
 
 fn display_board(game_board: &mut [[char; SIZE]; SIZE]) {
@@ -165,4 +171,69 @@ fn display_board(game_board: &mut [[char; SIZE]; SIZE]) {
     }
 }
 
-fn check_winner(game_board: [[char; SIZE]; SIZE], row: usize, col: usize) {}
+// fn check_winner(game_board: &mut [[char; SIZE]; SIZE], col: usize, row: usize) -> bool {
+//     // Vertical control
+//     if
+//         row <= 5 &&
+//         game_board[col][row] == game_board[col][row + 1] &&
+//         game_board[col][row + 1] == game_board[col][row + 2] &&
+//         game_board[col][row + 2] == game_board[col][row + 3]
+//     {
+//         return true;
+//     } else if
+//         col > 2 &&
+//         game_board[col][row] == game_board[col - 1][row] &&
+//         game_board[col - 1][row] == game_board[col - 2][row] &&
+//         game_board[col - 2][row] == game_board[col - 3][row]
+//     {
+//         return true;
+//     } else if
+//         col > 0 &&
+//         col < 6 &&
+//         game_board[col][row] == game_board[col - 1][row] &&
+//         game_board[col][row] == game_board[col + 1][row] &&
+//         game_board[col + 1][row] == game_board[col + 2][row]
+//     {
+//         return true;
+//     }
+
+//     return false;
+// }
+
+fn check_winner(board: &mut [[char; SIZE]; SIZE], col: usize, row: usize) -> bool {
+    let directions = [
+        (0, 1),
+        (1, 0),
+        (1, 1),
+        (1, -1),
+        (-1, 0),
+        (0, -1),
+        (-1, -1),
+        (-1, 1),
+    ];
+
+    for &(dx, dy) in directions.iter() {
+        let mut count = 1;
+
+        for step in 1..=3 {
+            let check_col = ((col as isize) + dx * (step as isize)) as usize;
+            let check_row = ((row as isize) + dy * (step as isize)) as usize;
+
+            if check_col >= SIZE || check_row >= SIZE {
+                break;
+            }
+
+            if board[check_col][check_row] != board[col][row] {
+                break;
+            }
+
+            count += 1;
+        }
+
+        if count >= 4 {
+            return true;
+        }
+    }
+
+    false
+}
