@@ -1,4 +1,5 @@
 use std::io::{ self, Write };
+use std::fs;
 use rand::Rng;
 
 struct Player {
@@ -13,7 +14,7 @@ enum Color {
 
 const SIZE: usize = 9;
 
-fn main() {
+fn create_new_game() -> (Player, Player, bool, [[char; SIZE]; SIZE]) {
     let mut user1_name = String::new();
     let mut user2_name = String::new();
 
@@ -38,7 +39,7 @@ fn main() {
         color: Color::Red,
     };
 
-    let mut turn_control = false;
+    let mut turn_control;
 
     println!("--------------- Head means Blue, tail means Red. ---------------");
 
@@ -78,17 +79,106 @@ fn main() {
     }
 
     let mut game_board: [[char; SIZE]; SIZE] = [[' '; SIZE]; SIZE];
-    display_board(&mut game_board);
+    (player1, player2, turn_control, game_board)
+}
+
+fn recover_session() {}
+
+fn main() {
+    let (mut player1, mut player2, mut turn_control, mut game_board);
     loop {
-        let currentPlayer = if turn_control { &player2 } else { &player1 };
-        let hasWinner: bool = make_move(&mut game_board, currentPlayer);
+        println!(
+            "---------------------------------MENU---------------------------------\n1) Recover last session.\n2) Create new Game."
+        );
+        let mut user_choice = String::new();
+
+        print!("Operation: ");
+        let _ = io::stdout().flush();
+        io::stdin().read_line(&mut user_choice).expect("failed to read line");
+
+        match user_choice.trim().parse::<u32>() {
+            Ok(i) => {
+                if i == 1 {
+                } else if i == 2 {
+                    (player1, player2, turn_control, game_board) = create_new_game();
+                    break;
+                } else {
+                    println!("Input must be 1 or 2. Try again.");
+                    continue;
+                }
+            }
+            Err(..) => println!("Input must be number. Try Again."),
+        }
+    }
+
+    println!("\nPlayer can always leave by pressing the 'q'. Let the game begin.\n");
+    let mut move_counter = 1;
+    loop {
+        let current_player = if turn_control { &player2 } else { &player1 };
+        println!(
+            "++++++++++++++++++ {} is playing. Move {} +++++++++++++++++++ ",
+            current_player.name,
+            move_counter
+        );
+        let has_winner: bool = make_move(&mut game_board, current_player);
         display_board(&mut game_board);
-        if hasWinner {
-            println!("{} won!", currentPlayer.name);
+        if has_winner {
+            println!("{} won!", current_player.name);
+            reset_files();
+            break;
+        }
+        move_counter += 1;
+        if move_counter >= 80 {
+            println!("Draw!");
+            reset_files();
+
             break;
         }
         turn_control = !turn_control;
+        update_board_file(
+            &player1.name,
+            get_enum_value(&player1.color).to_string(),
+            &player2.name,
+            get_enum_value(&player2.color).to_string(),
+            turn_control.to_string(),
+            move_counter.to_string(),
+            &mut game_board
+        );
     }
+}
+
+fn reset_files() {
+    fs::write("tahta.txt", "").expect("Unable to write file");
+    fs::write("hamle.txt", "").expect("Unable to write file");
+}
+
+fn update_board_file(
+    p1_name: &String,
+    p1_color: String,
+    p2_name: &String,
+    p2_color: String,
+    turn_control: String,
+    move_counter: String,
+    board: &mut [[char; SIZE]; SIZE]
+) {
+    let game_data = format!(
+        "{} {} | {} {} | {} | {}",
+        p1_name,
+        p1_color,
+        p2_name,
+        p2_color,
+        turn_control,
+        move_counter
+    );
+
+    let mut board_data = String::new();
+    for i in 0..SIZE {
+        for j in 0..SIZE {
+            board_data.push_str(&board[i][j].to_string());
+        }
+    }
+    let data = format!("{}\n{}", game_data, board_data);
+    fs::write("tahta.txt", data).expect("Unable to write file");
 }
 
 fn get_enum_value(color: &Color) -> char {
@@ -104,6 +194,10 @@ fn make_move(game_board: &mut [[char; SIZE]; SIZE], player: &Player) -> bool {
         print!("{} Enter Slot to Drop (1-{}): ", player.name, SIZE);
         let _ = io::stdout().flush();
         io::stdin().read_line(&mut player_choice).expect("failed to read line");
+        if player_choice.trim() == "q" {
+            println!("Exiting the game..");
+            std::process::exit(0);
+        }
         match player_choice.trim().parse::<usize>() {
             Ok(i) => {
                 if i < 1 || i > SIZE {
@@ -161,7 +255,7 @@ fn display_board(game_board: &mut [[char; SIZE]; SIZE]) {
         println!();
         print!("----");
 
-        for i in 0..=SIZE * 6 {
+        for _ in 0..=SIZE * 6 {
             print!("-");
             let _ = io::stdout().flush();
         }
