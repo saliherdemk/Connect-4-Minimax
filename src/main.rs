@@ -284,6 +284,8 @@ fn make_move(game_board: &mut [[char; SIZE]; SIZE], player: &Player) -> bool {
                         let clr_char: char = enum_type_to_value(&player.color);
                         game_board[i - 1][j] = clr_char;
                         update_move_file(i, j + 1, clr_char);
+                        println!("Array {:?}", minimax::find_legal_moves(*game_board));
+
                         return check_winner(game_board, i - 1, j);
                     } else {
                         count += 1;
