@@ -3,6 +3,8 @@ use std::fs;
 use rand::Rng;
 use std::fs::OpenOptions;
 
+mod minimax;
+// minimax::func()
 struct Player {
     name: String,
     color: Color,
@@ -30,7 +32,7 @@ fn main() {
 }
 
 fn start() {
-    let (mut player1, mut player2, mut turn_control, mut move_counter, mut game_board);
+    let (player1, player2, mut turn_control, mut move_counter, mut game_board);
     loop {
         println!(
             "---------------------------------MENU---------------------------------\n1) Recover last session.\n2) Create new Game."
@@ -120,7 +122,7 @@ fn create_new_game() -> (Player, Player, bool, i32, [[char; SIZE]; SIZE]) {
         color: Color::Red,
     };
 
-    let mut turn_control;
+    let turn_control;
 
     println!("--------------- Head means Blue, tail means Red. ---------------");
 
@@ -159,7 +161,7 @@ fn create_new_game() -> (Player, Player, bool, i32, [[char; SIZE]; SIZE]) {
         }
     }
 
-    let mut game_board: [[char; SIZE]; SIZE] = [[' '; SIZE]; SIZE];
+    let game_board: [[char; SIZE]; SIZE] = [[' '; SIZE]; SIZE];
     (player1, player2, turn_control, 1, game_board)
 }
 
@@ -279,9 +281,9 @@ fn make_move(game_board: &mut [[char; SIZE]; SIZE], player: &Player) -> bool {
                 let mut count = 0;
                 for j in (0..SIZE).rev() {
                     if game_board[i - 1][j] == ' ' {
-                        let clrChar: char = enum_type_to_value(&player.color);
-                        game_board[i - 1][j] = clrChar;
-                        update_move_file(i, j + 1, clrChar);
+                        let clr_char: char = enum_type_to_value(&player.color);
+                        game_board[i - 1][j] = clr_char;
+                        update_move_file(i, j + 1, clr_char);
                         return check_winner(game_board, i - 1, j);
                     } else {
                         count += 1;
