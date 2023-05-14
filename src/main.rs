@@ -1,6 +1,7 @@
 use std::io::{ self, Write };
 use std::fs;
 use rand::Rng;
+use std::fs::OpenOptions;
 
 struct Player {
     name: String,
@@ -13,6 +14,86 @@ enum Color {
 }
 
 const SIZE: usize = 9;
+
+fn main() {
+    loop {
+        start();
+        let mut user_choice = String::new();
+        println!("----------------------Press 1 for go back to menu.----------------------");
+        print!("Operation: ");
+        let _ = io::stdout().flush();
+        io::stdin().read_line(&mut user_choice).expect("failed to read line");
+        if user_choice.trim() != "1" {
+            break;
+        }
+    }
+}
+
+fn start() {
+    let (mut player1, mut player2, mut turn_control, mut move_counter, mut game_board);
+    loop {
+        println!(
+            "---------------------------------MENU---------------------------------\n1) Recover last session.\n2) Create new Game."
+        );
+        let mut user_choice = String::new();
+
+        print!("Operation: ");
+        let _ = io::stdout().flush();
+        io::stdin().read_line(&mut user_choice).expect("failed to read line");
+
+        match user_choice.trim().parse::<u32>() {
+            Ok(i) => {
+                if i == 1 {
+                    (player1, player2, turn_control, move_counter, game_board) = recover_session();
+                    break;
+                } else if i == 2 {
+                    (player1, player2, turn_control, move_counter, game_board) = create_new_game();
+                    break;
+                } else {
+                    println!("Input must be 1 or 2. Try again.");
+                    continue;
+                }
+            }
+            Err(..) => println!("Input must be number. Try Again."),
+        }
+    }
+
+    display_board(&mut game_board);
+
+    println!("\nPlayer can always leave by pressing the 'q'. Let the game begin.\n");
+    loop {
+        let current_player = if turn_control { &player2 } else { &player1 };
+        println!(
+            "++++++++++++++++++ {}({}) is playing. Move {} +++++++++++++++++++ ",
+            current_player.name,
+            enum_type_to_value(&current_player.color),
+            move_counter
+        );
+        let has_winner: bool = make_move(&mut game_board, current_player);
+        display_board(&mut game_board);
+        if has_winner {
+            println!("{} won!", current_player.name);
+            reset_files();
+            break;
+        }
+        move_counter += 1;
+        if move_counter >= 80 {
+            println!("Draw!");
+            reset_files();
+            break;
+        }
+        turn_control = !turn_control;
+        update_board_file(
+            &player1.name,
+            enum_type_to_value(&player1.color).to_string(),
+            &player2.name,
+            enum_type_to_value(&player2.color).to_string(),
+            turn_control.to_string(),
+            move_counter.to_string(),
+            &mut game_board
+        );
+    }
+}
 
 fn create_new_game() -> (Player, Player, bool, i32, [[char; SIZE]; SIZE]) {
     let mut user1_name = String::new();
@@ -84,31 +165,33 @@ fn create_new_game() -> (Player, Player, bool, i32, [[char; SIZE]; SIZE]) {
 
 fn recover_session() -> (Player, Player, bool, i32, [[char; SIZE]; SIZE]) {
     let data = fs::read_to_string("tahta.txt").expect("Should have been able to read the file");
+    if data == "" {
+        println!("There is no recorded game. New game created. ");
+        return create_new_game();
+    }
     let data_array: Vec<_> = data.split("\n").collect();
-    let game_data_array: Vec<_> = data_array[0].split("|").collect();
-    let board_data = data_array[1];
-    let p1_data: Vec<_> = game_data_array[0].split(" ").collect();
-    let p2_data: Vec<_> = game_data_array[1].split(" ").collect();
-    let turn_control: bool = match game_data_array[2] {
+
+    let turn_control: bool = match data_array[4] {
         "true" => true,
         "false" => false,
+        &_ => false,
     };
-    let move_counter = game_data_array[3] as i32;
+
+    let move_counter = data_array[5].trim().parse::<i32>().unwrap();
 
     let p1 = Player {
-        name: p1_data[0].to_string(),
-        color: value_to_enum_type(p1_data[1].chars()),
+        name: data_array[0].to_string(),
+        color: value_to_enum_type(data_array[1]),
     };
 
     let p2 = Player {
-        name: p2_data[0].to_string(),
-        color: value_to_enum_type(p2_data[1].chars()),
+        name: data_array[2].to_string(),
+        color: value_to_enum_type(data_array[3]),
     };
 
     let mut game_board: [[char; SIZE]; SIZE] = [[' '; SIZE]; SIZE];
+    let board_data = data_array[6];
 
-    println!("{}", game_data);
-    println!("{}", board_data);
     let mut i = 0;
 
     for j in 0..9 {
@@ -119,71 +202,6 @@ fn recover_session() -> (Player, Player, bool, i32, [[char; SIZE]; SIZE]) {
     }
 
     (p1, p2, turn_control, move_counter, game_board)
-}
-
-fn main() {
-    let (mut player1, mut player2, mut turn_control, mut move_counter, mut game_board);
-    loop {
-        println!(
-            "---------------------------------MENU---------------------------------\n1) Recover last session.\n2) Create new Game."
-        );
-        let mut user_choice = String::new();
-
-        print!("Operation: ");
-        let _ = io::stdout().flush();
-        io::stdin().read_line(&mut user_choice).expect("failed to read line");
-
-        match user_choice.trim().parse::<u32>() {
-            Ok(i) => {
-                if i == 1 {
-                    (player1, player2, turn_control, move_counter, game_board) = recover_session();
-                } else if i == 2 {
-                    (player1, player2, turn_control, move_counter, game_board) = create_new_game();
-                    break;
-                } else {
-                    println!("Input must be 1 or 2. Try again.");
-                    continue;
-                }
-            }
-            Err(..) => println!("Input must be number. Try Again."),
-        }
-    }
-
-    display_board(&mut game_board);
-
-    println!("\nPlayer can always leave by pressing the 'q'. Let the game begin.\n");
-    loop {
-        let current_player = if turn_control { &player2 } else { &player1 };
-        println!(
-            "++++++++++++++++++ {} is playing. Move {} +++++++++++++++++++ ",
-            current_player.name,
-            move_counter
-        );
-        let has_winner: bool = make_move(&mut game_board, current_player);
-        display_board(&mut game_board);
-        if has_winner {
-            println!("{} won!", current_player.name);
-            reset_files();
-            break;
-        }
-        move_counter += 1;
-        if move_counter >= 80 {
-            println!("Draw!");
-            reset_files();
-
-            break;
-        }
-        turn_control = !turn_control;
-        update_board_file(
-            &player1.name,
-            enum_type_to_value(&player1.color).to_string(),
-            &player2.name,
-            enum_type_to_value(&player2.color).to_string(),
-            turn_control.to_string(),
-            move_counter.to_string(),
-            &mut game_board
-        );
-    }
 }
 
 fn reset_files() {
@@ -201,7 +219,7 @@ fn update_board_file(
     board: &mut [[char; SIZE]; SIZE]
 ) {
     let game_data = format!(
-        "{} {} | {} {} | {} | {}",
+        "{}\n{}\n{}\n{}\n{}\n{}",
         p1_name,
         p1_color,
         p2_name,
@@ -220,6 +238,13 @@ fn update_board_file(
     fs::write("tahta.txt", data).expect("Unable to write file");
 }
 
+fn update_move_file(col: usize, row: usize, color: char) {
+    let mut file = OpenOptions::new().append(true).open("hamle.txt").expect("cannot open file");
+
+    let data = format!("{}{}=>{}\n", col.to_string(), row.to_string(), color);
+    file.write_all(data.as_bytes()).expect("write failed");
+}
+
 fn enum_type_to_value(color: &Color) -> char {
     match color {
         Color::Blue => 'B',
@@ -227,10 +252,11 @@ fn enum_type_to_value(color: &Color) -> char {
     }
 }
 
-fn value_to_enum_type(color: char) -> Color {
+fn value_to_enum_type(color: &str) -> Color {
     match color {
-        'B' => Color::Blue,
-        'R' => Color::Red,
+        "B" => Color::Blue,
+        "R" => Color::Red,
+        &_ => Color::Blue,
     }
 }
 
@@ -253,7 +279,9 @@ fn make_move(game_board: &mut [[char; SIZE]; SIZE], player: &Player) -> bool {
                 let mut count = 0;
                 for j in (0..SIZE).rev() {
                     if game_board[i - 1][j] == ' ' {
-                        game_board[i - 1][j] = enum_type_to_value(&player.color);
+                        let clrChar: char = enum_type_to_value(&player.color);
+                        game_board[i - 1][j] = clrChar;
+                        update_move_file(i, j + 1, clrChar);
                         return check_winner(game_board, i - 1, j);
                     } else {
                         count += 1;
@@ -310,35 +338,6 @@ fn display_board(game_board: &mut [[char; SIZE]; SIZE]) {
         j = j + 1;
     }
 }
-
-// fn check_winner(game_board: &mut [[char; SIZE]; SIZE], col: usize, row: usize) -> bool {
-//     // Vertical control
-//     if
-//         row <= 5 &&
-//         game_board[col][row] == game_board[col][row + 1] &&
-//         game_board[col][row + 1] == game_board[col][row + 2] &&
-//         game_board[col][row + 2] == game_board[col][row + 3]
-//     {
-//         return true;
-//     } else if
-//         col > 2 &&
-//         game_board[col][row] == game_board[col - 1][row] &&
-//         game_board[col - 1][row] == game_board[col - 2][row] &&
-//         game_board[col - 2][row] == game_board[col - 3][row]
-//     {
-//         return true;
-//     } else if
-//         col > 0 &&
-//         col < 6 &&
-//         game_board[col][row] == game_board[col - 1][row] &&
-//         game_board[col][row] == game_board[col + 1][row] &&
-//         game_board[col + 1][row] == game_board[col + 2][row]
-//     {
-//         return true;
-//     }
-
-//     return false;
-// }
 
 fn check_winner(board: &mut [[char; SIZE]; SIZE], col: usize, row: usize) -> bool {
     let directions = [

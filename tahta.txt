@@ -1,2 +1,0 @@
-1 R | 2 B | false | 12
-        R       BB       BR        R       RB        B        R        B         
