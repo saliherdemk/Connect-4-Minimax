@@ -69,6 +69,7 @@ fn start() {
             enum_type_to_value(&current_player.color),
             move_counter
         );
+        println!("{}", current_player.name);
         let has_winner: bool = make_move(&mut game_board, current_player);
         display_board(&mut game_board);
         if has_winner {
@@ -341,38 +342,115 @@ fn display_board(game_board: &mut [[char; SIZE]; SIZE]) {
 }
 
 fn check_winner(board: &mut [[char; SIZE]; SIZE], col: usize, row: usize) -> bool {
-    let directions = [
-        (0, 1),
-        (1, 0),
-        (1, 1),
-        (1, -1),
-        (-1, 0),
-        (0, -1),
-        (-1, -1),
-        (-1, 1),
-    ];
-
-    for &(dx, dy) in directions.iter() {
-        let mut count = 1;
-
-        for step in 1..=3 {
-            let check_col = ((col as isize) + dx * (step as isize)) as usize;
-            let check_row = ((row as isize) + dy * (step as isize)) as usize;
-
-            if check_col >= SIZE || check_row >= SIZE {
-                break;
-            }
-
-            if board[check_col][check_row] != board[col][row] {
-                break;
-            }
-
-            count += 1;
-        }
-
-        if count >= 4 {
-            return true;
-        }
+    if
+        row < SIZE - 3 &&
+        board[col][row] == board[col][row + 1] &&
+        board[col][row + 1] == board[col][row + 2] &&
+        board[col][row + 2] == board[col][row + 3]
+    {
+        return true;
+    } else if
+        col > 2 &&
+        board[col][row] == board[col - 1][row] &&
+        board[col - 1][row] == board[col - 2][row] &&
+        board[col - 2][row] == board[col - 3][row]
+    {
+        return true;
+    } else if
+        col > 0 &&
+        col < SIZE - 2 &&
+        board[col][row] == board[col - 1][row] &&
+        board[col][row] == board[col + 1][row] &&
+        board[col + 1][row] == board[col + 2][row]
+    {
+        return true;
+    } else if
+        col > 1 &&
+        col < SIZE - 1 &&
+        board[col - 1][row] == board[col - 2][row] &&
+        board[col][row] == board[col - 1][row] &&
+        board[col][row] == board[col + 1][row]
+    {
+        return true;
+    } else if
+        col < SIZE - 3 &&
+        board[col][row] == board[col + 1][row] &&
+        board[col + 1][row] == board[col + 2][row] &&
+        board[col + 2][row] == board[col + 3][row]
+    {
+        return true;
+    } else if
+        col < SIZE - 3 &&
+        row < SIZE - 3 &&
+        board[col][row] == board[col + 1][row + 1] &&
+        board[col + 1][row + 1] == board[col + 2][row + 2] &&
+        board[col + 2][row + 2] == board[col + 3][row + 3]
+    {
+        return true;
+    } else if
+        col > 0 &&
+        col < SIZE - 2 &&
+        row > 0 &&
+        row < SIZE - 2 &&
+        board[col][row] == board[col - 1][row - 1] &&
+        board[col][row] == board[col + 1][row + 1] &&
+        board[col + 1][row + 1] == board[col + 2][row + 2]
+    {
+        return true;
+    } else if
+        col > 1 &&
+        col < SIZE - 1 &&
+        row > 1 &&
+        row < SIZE - 1 &&
+        board[col - 1][row - 1] == board[col - 2][row - 2] &&
+        board[col][row] == board[col - 1][row - 1] &&
+        board[col][row] == board[col + 1][row + 1]
+    {
+        return true;
+    } else if
+        col > 2 &&
+        row > 2 &&
+        board[col][row] == board[col - 1][row - 1] &&
+        board[col - 1][row - 1] == board[col - 2][row - 2] &&
+        board[col - 2][row - 2] == board[col - 3][row - 3]
+    {
+        return true;
+    } else if
+        col < SIZE - 3 &&
+        row > 2 &&
+        board[col][row] == board[col + 1][row - 1] &&
+        board[col + 1][row - 1] == board[col + 2][row - 2] &&
+        board[col + 2][row - 2] == board[col + 3][row - 3]
+    {
+        return true;
+    } else if
+        col > 0 &&
+        col < SIZE - 2 &&
+        row > 1 &&
+        row < SIZE - 2 &&
+        board[col][row] == board[col - 1][row + 1] &&
+        board[col][row] == board[col + 1][row - 1] &&
+        board[col + 1][row - 1] == board[col + 2][row - 2]
+    {
+        return true;
+    } else if
+        col > 1 &&
+        col < SIZE - 1 &&
+        row > 0 &&
+        row < SIZE - 2 &&
+        board[col - 1][row + 1] == board[col - 2][row + 2] &&
+        board[col][row] == board[col - 1][row + 1] &&
+        board[col][row] == board[col + 1][row - 1]
+    {
+        return true;
+    } else if
+        col > 2 &&
+        row < SIZE - 3 &&
+        board[col][row] == board[col - 1][row + 1] &&
+        board[col - 1][row + 1] == board[col - 2][row + 2] &&
+        board[col - 2][row + 2] == board[col - 3][row + 3]
+    {
+        return true;
     }
 
     false
